@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite" // Change to "postgresql" or "mysql" for production
+  provider = "sqlite"
   url = "file:./prisma/dev.sqlite"
 
 }

@@ -181,7 +181,7 @@ function PreviewPane({ open, onClose, title, questions, onSubmitPublic }) {
 }
 
 /* ---------- Builder ---------- */
-function ShopifyFormBuilder({ onPublish, isPublishing }) {
+function ShopifyFormBuilder({ onPublish, isPublishing, shop }) {
   const [title, setTitle] = useState('');
   const [questions, setQuestions] = useState([]);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -199,7 +199,7 @@ function ShopifyFormBuilder({ onPublish, isPublishing }) {
   function publish() { 
     if(!title) return alert("Please add a form title");
     if(questions.length === 0) return alert("Please add at least one question");
-    const payload = { title, questions }; 
+    const payload = { title, questions, shop }; 
     if (onPublish) onPublish(payload); 
   }
 
@@ -422,12 +422,14 @@ function PublicForm({ formId, onSubmitted }) {
 }
 
 /* ---------- Main App (Dashboard + Builder) ---------- */
-export default function App() {
+export default function App({request}) {
   const [forms, setForms] = useState([]);
   const [hovered, setHovered] = useState(null);
   const [showResponsesFor, setShowResponsesFor] = useState(null);
   const [responseRows, setResponseRows] = useState([]);
   const [loadingResp, setLoadingResp] = useState(false);
+  const url = new URL(request.url);
+  const shop = url.searchParams.get("shop");
   
   const [isClient, setIsClient] = useState(false);
   const [clientHash, setClientHash] = useState("");
@@ -565,7 +567,7 @@ export default function App() {
           </div>
         </div>
 
-        <ShopifyFormBuilder onPublish={handleFormPublish} isPublishing={publishing} />
+        <ShopifyFormBuilder onPublish={handleFormPublish} isPublishing={publishing} shop={shop}/>
 
         {showResponsesFor && (
           <div className="responses-panel">
