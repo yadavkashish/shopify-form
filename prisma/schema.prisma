@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // Change to "postgresql" or "mysql" for production
+  url = "file:./prisma/dev.sqlite"
+
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+// New Models for the Form Builder
+
+model Form {
+  id          String     @id @default(uuid())
+  shop        String     // To link the form to the specific Shopify store
+  title       String
+  questions   String     // Stored as a JSON string (Prisma 'Json' type is better if using Postgres/MySQL)
+  status      String     @default("Active")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  responses   Response[]
+}
+
+model Response {
+  id          String   @id @default(uuid())
+  formId      String
+  form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  answers     String   // Stored as a JSON string containing the user's answers
+  createdAt   DateTime @default(now())
+}
