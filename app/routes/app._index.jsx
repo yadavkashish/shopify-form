@@ -421,15 +421,23 @@ function PublicForm({ formId, onSubmitted }) {
   );
 }
 
-/* ---------- Main App (Dashboard + Builder) ---------- */
 export default function App({request}) {
+  const [shop, setShop] = useState(null);
   const [forms, setForms] = useState([]);
   const [hovered, setHovered] = useState(null);
   const [showResponsesFor, setShowResponsesFor] = useState(null);
   const [responseRows, setResponseRows] = useState([]);
   const [loadingResp, setLoadingResp] = useState(false);
-  const url = new URL(request.url);
-  const shop = url.searchParams.get("shop");
+ useEffect(() => {
+    if (request) {
+      const url = new URL(request.url);
+      setShop(url.searchParams.get("shop"));
+    }
+    else if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      setShop(url.searchParams.get("shop"));
+    }
+  }, [request]);
   
   const [isClient, setIsClient] = useState(false);
   const [clientHash, setClientHash] = useState("");
