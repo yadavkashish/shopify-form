@@ -540,7 +540,7 @@ export default function App({request}) {
         <div className="page-top">
           <div>
             <h2 style={{ fontSize:28, margin:0 }}>Form Dashboard</h2>
-            <div className="muted" style={{ marginTop:6 }}>Manage your forms & responses (stored in DB).</div>
+            <div className="muted" style={{ marginTop:6 }}>Manage your forms & responses .</div>
           </div>
         </div>
 
