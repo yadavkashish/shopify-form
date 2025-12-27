@@ -2,7 +2,7 @@
 
 client_id = "96be7cefd62a5a8a015c76c8a7e73169"
 name = "fasdasfd"
-application_url = "https://example.com"
+application_url = "https://shop-form-nu.vercel.app"
 embedded = true
 
 [webhooks]
@@ -13,7 +13,7 @@ api_version = "2026-01"
 scopes = "write_products"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://shop-form-nu.vercel.app/api/auth" ]
 
 [build]
 automatically_update_urls_on_dev = true

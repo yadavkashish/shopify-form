@@ -2,7 +2,7 @@
 
 client_id = "0a2303709f403a951feea7c9d8e69670"
 name = "formMaker"
-application_url = "https://shopify-form-nu.vercel.app"
+application_url = "https://shop-form-nu.vercel.app"
 embedded = true
 
 [build]
@@ -24,6 +24,6 @@ api_version = "2026-01"
 scopes = "write_products"
 
 [auth]
-redirect_urls = [ "https://shopify-form-nu.vercel.app/api/auth" ]
+redirect_urls = [ "https://shop-form-nu.vercel.app/api/auth" ]
 
 
