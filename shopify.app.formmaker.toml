@@ -1,6 +1,6 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "0a2303709f403a951feea7c9d8e69670"
+client_id = "0647d1a193c2adb2b39343c8455318b2"
 name = "formMaker"
 application_url = "https://shop-form-nu.vercel.app"
 embedded = true
