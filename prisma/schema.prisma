@@ -30,9 +30,10 @@ model Session {
 
 model Form {
   id          String     @id @default(uuid())
-  shop        String     // To link the form to the specific Shopify store
+  shop        String     
   title       String
-  questions   String     // Stored as a JSON string (Prisma 'Json' type is better if using Postgres/MySQL)
+  questions   Json       // Changed from String to Json for better data handling
+  settings    Json       // New field to store alignment, colors, etc.
   status      String     @default("Active")
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt

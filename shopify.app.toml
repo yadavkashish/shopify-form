@@ -33,5 +33,3 @@ redirect_urls = [ "https://shop-form-nu.vercel.app/api/auth", "https://shop-form
 [pos]
 embedded = true
 
-[build]
-automatically_update_urls_on_dev = true
