@@ -29,21 +29,21 @@ model Session {
 // New Models for the Form Builder
 
 model Form {
-  id          String     @id @default(uuid())
-  shop        String     
-  title       String
-  questions   Json       // Changed from String to Json for better data handling
-  settings    Json       // New field to store alignment, colors, etc.
-  status      String     @default("Active")
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  responses   Response[]
+  id         String     @id @default(uuid())
+  shop       String
+  title      String
+  questions  Json
+  settings   Json
+  status     String     @default("Active")
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  responses  Response[]
 }
 
 model Response {
-  id          String   @id @default(uuid())
-  formId      String
-  form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
-  answers     String   // Stored as a JSON string containing the user's answers
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  formId    String
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  answers   Json     // This will store the key-value pairs of the submission
+  createdAt DateTime @default(now())
 }
