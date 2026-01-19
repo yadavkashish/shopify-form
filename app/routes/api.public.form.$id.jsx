@@ -1,5 +1,5 @@
 import { json } from "@remix-run/node";
-import prisma from "../../db.server";
+import prisma from "../db.server";
 
 // This function handles the CORS headers for all responses in this file
 const getCorsHeaders = () => ({
