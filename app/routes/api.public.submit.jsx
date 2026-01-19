@@ -1,4 +1,3 @@
-// app/routes/api.public.submit.jsx
 import { json } from "@remix-run/node";
 import prisma from "../db.server";
 
@@ -9,7 +8,7 @@ export const action = async ({ request }) => {
     "Access-Control-Allow-Headers": "Content-Type",
   };
 
-  // 1. Critical Fix: Respond to CORS pre-flight with 204 No Content
+  // 1. Handle CORS Pre-flight
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers });
   }
@@ -22,21 +21,46 @@ export const action = async ({ request }) => {
     const body = await request.json();
     const { formId, answers } = body;
 
+    console.log("Incoming Submission:", { formId, answers });
+
+    // 2. Validation
     if (!formId || !answers) {
+      console.error("Validation Failed: Missing formId or answers");
       return json({ error: "Missing required fields" }, { status: 400, headers });
     }
 
-    await prisma.response.create({
+    // 3. Check if the Form actually exists (Crucial after a database reset!)
+    const formExists = await prisma.form.findUnique({
+      where: { id: formId }
+    });
+
+    if (!formExists) {
+      console.error(`Error: Form with ID ${formId} does not exist in the database.`);
+      return json({ 
+        error: "Form not found", 
+        details: "The Form ID provided does not exist. If you reset your database, you must create a new form and update the ID in Shopify." 
+      }, { status: 404, headers });
+    }
+
+    // 4. Save to the Response model
+    const newResponse = await prisma.response.create({
       data: {
         formId: formId,
-        answers: answers, 
+        answers: JSON.stringify(answers), // Ensure it's stored as a string if schema expects String, or keep as object if Json
       },
     });
 
-    return json({ success: true }, { headers });
+    console.log("Success: Saved response", newResponse.id);
+    return json({ success: true, id: newResponse.id }, { headers });
+
   } catch (error) {
-    console.error("Submission Error:", error);
-   
-    return json({ error: "Database error", details: error.message }, { status: 500, headers });
+    // 5. Detailed Error Logging for Vercel
+    console.error("CRITICAL SUBMISSION ERROR:", error);
+    
+    return json({ 
+      error: "Internal Server Error", 
+      message: error.message,
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined 
+    }, { status: 500, headers });
   }
 };
