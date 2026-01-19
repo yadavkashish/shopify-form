@@ -1,51 +1,55 @@
 import { json } from "@remix-run/node";
 import prisma from "../db.server";
 
-export const action = async ({ request }) => {
-  const headers = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  };
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
 
-  // 1. Handle Pre-flight
+export const loader = async ({ request }) => {
+  // 👈 THIS is the missing piece
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  if (request.method !== "POST") {
-    return json({ error: "Method not allowed" }, { status: 405, headers });
+  return json({ error: "Not allowed" }, { status: 405, headers: corsHeaders });
+};
+
+export const action = async ({ request }) => {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
     const body = await request.json();
     const { formId, answers } = body;
 
-    // 2. Check Database Connection & Form Existence
     const form = await prisma.form.findUnique({
       where: { id: formId },
     });
 
     if (!form) {
-      return json({ error: "Form not found. Check your Form ID." }, { status: 404, headers });
+      return json(
+        { error: "Form not found" },
+        { status: 404, headers: corsHeaders }
+      );
     }
 
-    // 3. Save Response
     await prisma.response.create({
       data: {
-        formId: formId,
-        answers: JSON.stringify(answers), // Ensure matching schema type
+        formId,
+        answers: JSON.stringify(answers),
       },
     });
 
-    return json({ success: true }, { headers });
+    return json({ success: true }, { headers: corsHeaders });
 
   } catch (error) {
     console.error("Submission Error:", error);
-    // CRITICAL: Must return headers here so the browser doesn't block the error message
-    return json({ 
-      error: "Server Error", 
-      details: error.message 
-    }, { status: 500, headers });
+    return json(
+      { error: "Server Error" },
+      { status: 500, headers: corsHeaders }
+    );
   }
 };
