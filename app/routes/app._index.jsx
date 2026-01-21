@@ -26,15 +26,6 @@ async function apiSaveForm(payload) {
   throw new Error(err.error || "Failed to save form");
 }
 
-/* --- NEW DELETE API LOGIC --- */
-async function apiDeleteForm(id) {
-  const res = await fetch(`${API_URL}?id=${id}`, {
-    method: "DELETE",
-  });
-  if (res.ok) return res.json();
-  throw new Error("Failed to delete form");
-}
-
 /* --- CONSTANTS --- */
 const FIELD_TYPES = [
   { type: 'short', label: 'Short Text', icon: <Type size={16} /> },
@@ -44,6 +35,7 @@ const FIELD_TYPES = [
   { type: 'select', label: 'Dropdown', icon: <List size={16} />, hasOptions: true },
   { type: 'checkboxes', label: 'Checkboxes', icon: <CheckSquare size={16} />, hasOptions: true },
 ];
+
 
 const DEFAULT_SETTINGS = {
   description: 'Please fill out the form below.',
@@ -144,12 +136,52 @@ function EditorView({ currentForm, setCurrentForm, setView, onSave, isSaving }) 
                   <div key={q.id} style={{ padding: '16px', borderRadius: '12px', border: '1px solid #eee', position: 'relative' }}>
                     <button onClick={() => setCurrentForm(prev => ({...prev, questions: prev.questions.filter(x => x.id !== q.id)}))} style={{ position: 'absolute', right: '10px', top: '10px', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
                     <span style={{ fontSize: '11px', fontWeight: '700', color: '#10b981', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>{q.type}</span>
+                    
                     <input style={STYLES.input} value={q.text} onChange={(e) => updateQuestion(q.id, { text: e.target.value })} placeholder="Label text" />
+                    
+                    {/* --- ADDED REQUIRED OPTION --- */}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={q.required} onChange={(e) => updateQuestion(q.id, { required: e.target.checked })} />
+                      Required Field
+                    </label>
+
+                    {/* --- ADDED OPTIONS MANAGEMENT FOR SELECT/CHECKBOXES --- */}
+                    { (q.type === 'select' || q.type === 'checkboxes') && (
+                      <div style={{ marginTop: '12px', borderTop: '1px solid #f3f4f6', paddingTop: '12px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', display: 'block', marginBottom: '8px' }}>OPTIONS</span>
+                        {q.options.map((opt, idx) => (
+                          <div key={idx} style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
+                            <input 
+                              style={{ ...STYLES.input, padding: '6px 8px' }} 
+                              value={opt} 
+                              onChange={(e) => {
+                                const newOpts = [...q.options];
+                                newOpts[idx] = e.target.value;
+                                updateQuestion(q.id, { options: newOpts });
+                              }}
+                            />
+                            <button 
+                              onClick={() => updateQuestion(q.id, { options: q.options.filter((_, i) => i !== idx) })}
+                              style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                        <button 
+                          onClick={() => updateQuestion(q.id, { options: [...q.options, `Option ${q.options.length + 1}`] })}
+                          style={{ width: '100%', padding: '6px', marginTop: '4px', background: '#f9fafb', border: '1px dashed #d1d5db', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                        >
+                          + Add Option
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* --- EXTENDED DESIGN OPTIONS --- */}
                 <section>
                   <span style={STYLES.label}>Alignment</span>
                   <div style={{ display: 'flex', background: '#f3f4f6', padding: '4px', borderRadius: '10px' }}>
@@ -222,8 +254,29 @@ function EditorView({ currentForm, setCurrentForm, setView, onSave, isSaving }) 
             <p style={{ opacity: 0.7, marginBottom: '30px' }}>{currentForm.settings.description}</p>
             {currentForm.questions.map(q => (
               <div key={q.id} style={{ marginBottom: '20px', textAlign: 'left' }}>
-                <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', fontSize: '14px' }}>{q.text}</label>
-                <input style={{ ...STYLES.input, borderRadius: `${Math.min(currentForm.settings.borderRadius, 10)}px` }} placeholder={q.placeholder} disabled />
+                <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', fontSize: '14px' }}>
+                  {q.text} {q.required && <span style={{ color: '#ef4444' }}>*</span>}
+                </label>
+                
+                {/* --- RENDER LOGIC BASED ON TYPE --- */}
+                {q.type === 'select' ? (
+                  <select style={{ ...STYLES.input, borderRadius: `${Math.min(currentForm.settings.borderRadius, 10)}px` }} disabled>
+                    <option value="">Select an option...</option>
+                    {q.options.map((opt, i) => <option key={i}>{opt}</option>)}
+                  </select>
+                ) : q.type === 'checkboxes' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {q.options.map((opt, i) => (
+                      <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
+                        <input type="checkbox" disabled /> {opt}
+                      </label>
+                    ))}
+                  </div>
+                ) : q.type === 'paragraph' ? (
+                  <textarea style={{ ...STYLES.input, borderRadius: `${Math.min(currentForm.settings.borderRadius, 10)}px`, minHeight: '80px' }} placeholder={q.placeholder} disabled />
+                ) : (
+                  <input style={{ ...STYLES.input, borderRadius: `${Math.min(currentForm.settings.borderRadius, 10)}px` }} type={q.type} placeholder={q.placeholder} disabled />
+                )}
               </div>
             ))}
             <button style={{ 
@@ -280,18 +333,6 @@ export default function App() {
     }
   };
 
-  /* --- NEW DELETE HANDLER --- */
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete? Your data will be lost once confirmed.")) {
-      try {
-        await apiDeleteForm(id);
-        setForms(prev => prev.filter(f => f.id !== id));
-      } catch (e) {
-        alert(e.message);
-      }
-    }
-  };
-
   if (loading) return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}><Loader className="animate-spin" /></div>;
 
   return (
@@ -325,8 +366,6 @@ export default function App() {
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <button onClick={() => { setCurrentForm(f); setView('editor'); }} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid #e5e7eb', background: '#fff', fontWeight: '600', cursor: 'pointer' }}>Edit</button>
                       <button onClick={() => { navigator.clipboard.writeText(f.id); alert("ID Copied!"); }} style={{ padding: '10px', borderRadius: '10px', border: 'none', background: '#f3f4f6', cursor: 'pointer' }}><Copy size={18} /></button>
-                      {/* --- ADDED DELETE BUTTON --- */}
-                      <button onClick={() => handleDelete(f.id)} style={{ padding: '10px', borderRadius: '10px', border: 'none', background: '#fee2e2', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={18} /></button>
                     </div>
                   </div>
                 ))}

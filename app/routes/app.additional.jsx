@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, Calendar, FileText, ChevronRight, 
   Search, ArrowLeft, MessageSquare, ClipboardList,
-  Clock, Filter, MoreHorizontal, ExternalLink
+  Clock, Filter, MoreHorizontal, ExternalLink, Trash2
 } from 'lucide-react';
 
 /* --- API Helper --- */
@@ -28,13 +28,41 @@ export default function AdditionalPage() {
   const [view, setView] = useState({ type: 'dashboard', data: null });
 
   useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = () => {
+    setLoading(true);
     apiFetchResponses()
       .then(data => {
         setAllResponses(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  };
+
+  const handleDelete = async (formId) => {
+    const confirmed = window.confirm("Are you sure? The data will be lost permanently on confirm.");
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/responses?id=${formId}`, {
+        method: 'DELETE',
+      });
+      
+      if (res.ok) {
+        // Refresh local state by removing the deleted form's responses
+        setAllResponses(prev => prev.filter(r => r.formId !== formId));
+        alert("Form and its responses deleted successfully.");
+      } else {
+        const errData = await res.json();
+        alert(`Error: ${errData.error || "Failed to delete"}`);
+      }
+    } catch (error) {
+      console.error("Delete Error:", error);
+      alert("Failed to delete the form. Please try again.");
+    }
+  };
 
   const groupedForms = allResponses.reduce((acc, current) => {
     const id = current.formId;
@@ -125,6 +153,21 @@ export default function AdditionalPage() {
       borderRadius: '12px', 
       width: '320px',
       transition: 'all 0.2s ease'
+    },
+    deleteBtn: {
+      background: '#fff1f2',
+      border: 'none',
+      color: '#e11d48',
+      cursor: 'pointer',
+      padding: '8px 12px',
+      borderRadius: '8px',
+      fontSize: '13px',
+      fontWeight: '600',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '4px',
+      marginLeft: '8px',
+      transition: 'all 0.2s'
     }
   };
 
@@ -253,24 +296,33 @@ export default function AdditionalPage() {
                         </div>
                       </td>
                       <td style={{ ...STYLES.tableCell, textAlign: 'right' }}>
-                        <button 
-                          onClick={() => setView({ type: 'formDetail', data: form })}
-                          style={{ 
-                            background: '#f1f5f9', 
-                            border: 'none', 
-                            color: '#475569', 
-                            cursor: 'pointer', 
-                            padding: '8px 12px', 
-                            borderRadius: '8px',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          View Reports <ChevronRight size={16} />
-                        </button>
+                        <div style={{ display: 'inline-flex', gap: '8px' }}>
+                          <button 
+                            onClick={() => setView({ type: 'formDetail', data: form })}
+                            style={{ 
+                              background: '#f1f5f9', 
+                              border: 'none', 
+                              color: '#475569', 
+                              cursor: 'pointer', 
+                              padding: '8px 12px', 
+                              borderRadius: '8px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            View Reports <ChevronRight size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(form.formId)}
+                            style={STYLES.deleteBtn}
+                            title="Delete Form"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -300,6 +352,13 @@ export default function AdditionalPage() {
 
         button:active {
           transform: scale(0.98);
+        }
+
+        .table-row .delete-btn-hover {
+           opacity: 0.7;
+        }
+        .table-row:hover .delete-btn-hover {
+           opacity: 1;
         }
       `}} />
     </s-page>

@@ -1,4 +1,3 @@
-// extensions/forms/assets/form-renderer.js
 (function () {
   const container = document.getElementById('formify-container');
   const formId = container?.getAttribute('data-form-id');
@@ -34,7 +33,7 @@
         <p style="margin-bottom: 25px; opacity: 0.8;">${s.description}</p>
         <form id="formify-submit-form">
           ${questions.map(q => renderField(q)).join('')}
-          <button type="submit" id="formify-btn" style="width: 100%; background: ${s.buttonColor}; color: ${s.buttonTextColor}; padding: 12px; border: none; border-radius: ${s.borderRadius}px; cursor: pointer; font-weight: bold; font-size: 16px;">
+          <button type="submit" id="formify-btn" style="width: 100%; background: ${s.buttonColor}; color: #fff; padding: 12px; border: none; border-radius: ${s.borderRadius}px; cursor: pointer; font-weight: bold; font-size: 16px; margin-top: 10px;">
             ${s.buttonText}
           </button>
         </form>
@@ -54,7 +53,12 @@
       
       // Map question text to user answers
       questions.forEach(q => {
-        answers[q.text] = formData.get(q.id);
+        if (q.type === 'checkboxes') {
+          // Use getAll for checkboxes to capture multiple values
+          answers[q.text] = formData.getAll(q.id).join(', ');
+        } else {
+          answers[q.text] = formData.get(q.id);
+        }
       });
 
       try {
@@ -82,18 +86,53 @@
   }
 
   function renderField(q) {
-    return `
-      <div style="margin-bottom: 20px; text-align: left;">
-        <label style="display: block; margin-bottom: 8px; font-weight: 600;">
-          ${q.text} ${q.required ? '<span style="color:red">*</span>' : ''}
-        </label>
+    let inputHtml = '';
+    const commonStyle = `width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit; font-size: 14px;`;
+
+    if (q.type === 'select') {
+      inputHtml = `
+        <select name="${q.id}" style="${commonStyle}" ${q.required ? 'required' : ''}>
+          <option value="" disabled selected>${q.placeholder || 'Select an option...'}</option>
+          ${q.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+        </select>
+      `;
+    } else if (q.type === 'checkboxes') {
+      inputHtml = `
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          ${q.options.map((opt, i) => `
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; font-size: 14px;">
+              <input type="checkbox" name="${q.id}" value="${opt}" style="width: auto;"> ${opt}
+            </label>
+          `).join('')}
+        </div>
+      `;
+    } else if (q.type === 'paragraph') {
+      inputHtml = `
+        <textarea 
+          name="${q.id}" 
+          placeholder="${q.placeholder || ''}" 
+          style="${commonStyle} min-height: 100px; resize: vertical;" 
+          ${q.required ? 'required' : ''}
+        ></textarea>
+      `;
+    } else {
+      inputHtml = `
         <input 
           type="${q.type === 'email' ? 'email' : q.type === 'number' ? 'number' : 'text'}" 
           name="${q.id}" 
           placeholder="${q.placeholder || ''}"
-          style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
+          style="${commonStyle}"
           ${q.required ? 'required' : ''}
         />
+      `;
+    }
+
+    return `
+      <div style="margin-bottom: 20px; text-align: left;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">
+          ${q.text} ${q.required ? '<span style="color:red">*</span>' : ''}
+        </label>
+        ${inputHtml}
       </div>
     `;
   }
