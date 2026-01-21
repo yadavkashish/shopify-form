@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Plus, Trash2, Settings, Eye, Code, Save, ChevronLeft, Layout, 
-  Type, Mail, Hash, AlignLeft, CheckSquare, List, BarChart3, 
-  X, ListPlus, ExternalLink, Loader, Check, GripVertical,
-  AlignCenter, AlignRight
+  Plus, Trash2, Settings, Eye, Save, ChevronLeft, Layout, 
+  Type, Mail, Hash, AlignLeft, CheckSquare, List, 
+  X, Loader, Copy, MousePointer2, AlignCenter, AlignRight,
+  Maximize, Square, Paintbrush, MessageSquare
 } from 'lucide-react';
 
-/* --- API HELPERS --- */
+/* --- RESTORED API LOGIC --- */
 const API_URL = "/api/forms";
 
 async function apiFetchForms() {
@@ -26,11 +26,20 @@ async function apiSaveForm(payload) {
   throw new Error(err.error || "Failed to save form");
 }
 
-/* --- Constants --- */
+/* --- NEW DELETE API LOGIC --- */
+async function apiDeleteForm(id) {
+  const res = await fetch(`${API_URL}?id=${id}`, {
+    method: "DELETE",
+  });
+  if (res.ok) return res.json();
+  throw new Error("Failed to delete form");
+}
+
+/* --- CONSTANTS --- */
 const FIELD_TYPES = [
   { type: 'short', label: 'Short Text', icon: <Type size={16} /> },
   { type: 'paragraph', label: 'Long Text', icon: <AlignLeft size={16} /> },
-  { type: 'email', label: 'Email Address', icon: <Mail size={16} /> },
+  { type: 'email', label: 'Email', icon: <Mail size={16} /> },
   { type: 'number', label: 'Number', icon: <Hash size={16} /> },
   { type: 'select', label: 'Dropdown', icon: <List size={16} />, hasOptions: true },
   { type: 'checkboxes', label: 'Checkboxes', icon: <CheckSquare size={16} />, hasOptions: true },
@@ -38,32 +47,31 @@ const FIELD_TYPES = [
 
 const DEFAULT_SETTINGS = {
   description: 'Please fill out the form below.',
-  successMessage: 'Thank you! Your response has been recorded.',
-  buttonText: 'Submit',
-  buttonColor: '#15803d',
-  buttonTextColor: '#ffffff',
+  successMessage: 'Thank you for your response!',
+  buttonText: 'Submit Response',
+  buttonColor: '#10b981',
   backgroundColor: '#ffffff',
   textColor: '#1f2937',
   textAlign: 'left',
-  borderRadius: '8',
-  maxWidth: '500',
-  fontSize: '16',
-  fontFamily: 'Inter',
+  borderRadius: '12',
+  maxWidth: '540',
+  fontFamily: 'Inter, sans-serif',
   padding: '40',
 };
 
 const STYLES = {
-  sidebar: { width: '260px', backgroundColor: '#fff', borderRight: '1px solid #e5e7eb', height: '100vh', position: 'fixed', left: 0, top: 0, display: 'flex', flexDirection: 'column', zIndex: 10 },
-  navItem: (active) => ({ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '10px 16px', border: 'none', backgroundColor: active ? '#f3f4f6' : 'transparent', color: active ? '#15803d' : '#4b5563', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', fontWeight: active ? '700' : '400' }),
-  btnPrimary: { backgroundColor: '#15803d', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' },
-  editorSidebar: { width: '320px', borderRight: '1px solid #e5e7eb', backgroundColor: '#fff', height: '100%', overflowY: 'auto' },
-  input: { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', outline: 'none', boxSizing: 'border-box' },
-  label: { fontSize: '11px', fontWeight: '700', color: '#9ca3af', marginBottom: '6px', display: 'block', textTransform: 'uppercase' },
-  configBox: { padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#f9fafb', marginBottom: '16px' },
-  card: { backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }
+  container: { maxWidth: '1100px', margin: '0 auto', padding: '40px 20px' },
+  card: { 
+    backgroundColor: '#fff', border: '1px solid #f3f4f6', borderRadius: '16px', padding: '24px', 
+    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' 
+  },
+  input: { 
+    width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e5e7eb', fontSize: '14px', outline: 'none', boxSizing: 'border-box' 
+  },
+  label: { fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', display: 'block', marginTop: '16px' }
 };
 
-/* --- Editor View --- */
+/* --- EDITOR COMPONENT --- */
 function EditorView({ currentForm, setCurrentForm, setView, onSave, isSaving }) {
   const [activeTab, setActiveTab] = useState('fields');
 
@@ -87,234 +95,157 @@ function EditorView({ currentForm, setCurrentForm, setView, onSave, isSaving }) 
     }));
   };
 
-  const removeQuestion = (id) => {
-    setCurrentForm(prev => ({ 
-        ...prev, 
-        questions: prev.questions.filter(q => q.id !== id) 
-    }));
-  };
-
   const updateSettings = (key, value) => {
-    setCurrentForm(prev => ({ 
-        ...prev, 
-        settings: { ...prev.settings, [key]: value } 
-    }));
-  };
-
-  // Option Helpers
-  const updateOption = (qId, optIdx, newValue) => {
-    const question = currentForm.questions.find(q => q.id === qId);
-    const newOptions = [...question.options];
-    newOptions[optIdx] = newValue;
-    updateQuestion(qId, { options: newOptions });
-  };
-
-  const addOption = (qId) => {
-    const question = currentForm.questions.find(q => q.id === qId);
-    updateQuestion(qId, { options: [...question.options, `Option ${question.options.length + 1}`] });
-  };
-
-  const removeOption = (qId, optIdx) => {
-    const question = currentForm.questions.find(q => q.id === qId);
-    updateQuestion(qId, { options: question.options.filter((_, i) => i !== optIdx) });
+    setCurrentForm(prev => ({ ...prev, settings: { ...prev.settings, [key]: value } }));
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f9fafb' }}>
-      {/* Top Header */}
-      <div style={{ height: '60px', backgroundColor: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={() => setView('dashboard')} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><ChevronLeft /></button>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#fcfcfd' }}>
+      <header style={{ height: '64px', backgroundColor: '#fff', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', zIndex: 50 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button onClick={() => setView('dashboard')} style={{ background: '#f3f4f6', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}>
+            <ChevronLeft size={20} />
+          </button>
           <input 
-            style={{ fontWeight: '700', fontSize: '18px', border: 'none', outline: 'none', background: 'transparent' }} 
+            style={{ fontWeight: '600', fontSize: '16px', border: 'none', outline: 'none', width: '250px' }} 
             value={currentForm.title} 
             onChange={(e) => setCurrentForm({...currentForm, title: e.target.value})} 
           />
         </div>
-        <button onClick={onSave} disabled={isSaving} style={STYLES.btnPrimary}>
+        <button onClick={onSave} disabled={isSaving} style={{ 
+            backgroundColor: '#111827', color: '#fff', border: 'none', padding: '10px 20px', 
+            borderRadius: '10px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' 
+        }}>
           {isSaving ? <Loader size={16} className="animate-spin" /> : <Save size={16} />} Save Form
         </button>
-      </div>
+      </header>
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Editor Sidebar */}
-        <div style={STYLES.editorSidebar}>
-          <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb' }}>
-            <button onClick={() => setActiveTab('fields')} style={{ flex: 1, padding: '12px', border: 'none', borderBottom: activeTab === 'fields' ? '2px solid #15803d' : 'none', background: 'none', fontWeight: 'bold', fontSize: '12px', color: activeTab === 'fields' ? '#15803d' : '#9ca3af' }}>FIELDS</button>
-            <button onClick={() => setActiveTab('settings')} style={{ flex: 1, padding: '12px', border: 'none', borderBottom: activeTab === 'settings' ? '2px solid #15803d' : 'none', background: 'none', fontWeight: 'bold', fontSize: '12px', color: activeTab === 'settings' ? '#15803d' : '#9ca3af' }}>SETTINGS</button>
+        <aside style={{ width: '360px', borderRight: '1px solid #eee', backgroundColor: '#fff', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', padding: '16px 16px 0 16px', gap: '8px' }}>
+            <button onClick={() => setActiveTab('fields')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: activeTab === 'fields' ? '#f3f4f6' : 'transparent', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Build</button>
+            <button onClick={() => setActiveTab('settings')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: activeTab === 'settings' ? '#f3f4f6' : 'transparent', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Design</button>
           </div>
 
-          <div style={{ padding: '20px' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
             {activeTab === 'fields' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <span style={STYLES.label}>Add Elements</span>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  {FIELD_TYPES.map(ft => (
-                    <button key={ft.type} onClick={() => addQuestion(ft.type)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '15px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff', cursor: 'pointer' }}>
-                      {ft.icon} <span style={{ fontSize: '10px', marginTop: '5px' }}>{ft.label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <span style={{ ...STYLES.label, marginTop: '20px' }}>Field Config</span>
-                {currentForm.questions.map((q, i) => (
-                  <div key={q.id} style={STYLES.configBox}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#9ca3af' }}>#{i+1} {q.type.toUpperCase()}</span>
-                      <button onClick={() => removeQuestion(q.id)} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
-                    </div>
-                    <input style={{ ...STYLES.input, marginBottom: '8px' }} value={q.text} onChange={(e) => updateQuestion(q.id, { text: e.target.value })} />
-                    
-                    {/* Choices Editor for Checkbox/Dropdown */}
-                    {['select', 'checkboxes'].includes(q.type) && (
-                      <div style={{ marginBottom: '10px', borderTop: '1px solid #e5e7eb', paddingTop: '8px' }}>
-                        <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#9ca3af', display: 'block', marginBottom: '6px' }}>CHOICES</span>
-                        {q.options.map((opt, optIdx) => (
-                          <div key={optIdx} style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
-                            <input 
-                              style={{ ...STYLES.input, padding: '4px 8px', fontSize: '12px' }} 
-                              value={opt} 
-                              onChange={(e) => updateOption(q.id, optIdx, e.target.value)}
-                            />
-                            <button onClick={() => removeOption(q.id, optIdx)} style={{ border: 'none', background: 'none', color: '#9ca3af', cursor: 'pointer' }}><X size={14} /></button>
-                          </div>
-                        ))}
-                        <button onClick={() => addOption(q.id)} style={{ border: 'none', background: 'none', color: '#15803d', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>+ Add Choice</button>
-                      </div>
-                    )}
-
-                    <label style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <input type="checkbox" checked={q.required} onChange={(e) => updateQuestion(q.id, { required: e.target.checked })} /> Required
-                    </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <section>
+                  <span style={STYLES.label}>Elements</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    {FIELD_TYPES.map(ft => (
+                      <button key={ft.type} onClick={() => addQuestion(ft.type)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', border: '1px solid #f3f4f6', borderRadius: '12px', background: '#fff', cursor: 'pointer', fontSize: '13px' }}>
+                        <div style={{ color: '#10b981' }}>{ft.icon}</div> {ft.label}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+                {currentForm.questions.map((q) => (
+                  <div key={q.id} style={{ padding: '16px', borderRadius: '12px', border: '1px solid #eee', position: 'relative' }}>
+                    <button onClick={() => setCurrentForm(prev => ({...prev, questions: prev.questions.filter(x => x.id !== q.id)}))} style={{ position: 'absolute', right: '10px', top: '10px', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#10b981', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>{q.type}</span>
+                    <input style={STYLES.input} value={q.text} onChange={(e) => updateQuestion(q.id, { text: e.target.value })} placeholder="Label text" />
                   </div>
                 ))}
               </div>
             ) : (
-              /* Shopify-style Settings Tab */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <label style={STYLES.label}>Content</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <input style={STYLES.input} placeholder="Button Text" value={currentForm.settings.buttonText} onChange={e => updateSettings('buttonText', e.target.value)} />
-                    <textarea style={{ ...STYLES.input, height: '70px' }} placeholder="Description" value={currentForm.settings.description} onChange={e => updateSettings('description', e.target.value)} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <section>
+                  <span style={STYLES.label}>Alignment</span>
+                  <div style={{ display: 'flex', background: '#f3f4f6', padding: '4px', borderRadius: '10px' }}>
+                    {['left', 'center', 'right'].map(a => (
+                      <button key={a} onClick={() => updateSettings('textAlign', a)} style={{ flex: 1, padding: '8px', border: 'none', borderRadius: '7px', background: currentForm.settings.textAlign === a ? '#fff' : 'transparent', cursor: 'pointer' }}>
+                        {a === 'left' ? <AlignLeft size={16}/> : a === 'center' ? <AlignCenter size={16}/> : <AlignRight size={16}/>}
+                      </button>
+                    ))}
                   </div>
-                </div>
+                </section>
 
-                <div>
-                  <label style={STYLES.label}>Typography & Alignment</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <select style={STYLES.input} value={currentForm.settings.fontFamily} onChange={e => updateSettings('fontFamily', e.target.value)}>
-                      <option value="Inter, sans-serif">Inter (Sans)</option>
-                      <option value="Georgia, serif">Georgia (Serif)</option>
-                      <option value="'Courier New', monospace">Monospace</option>
-                    </select>
-                    
-                    <div style={{ display: 'flex', gap: '4px', background: '#f3f4f6', padding: '4px', borderRadius: '8px' }}>
-                      {['left', 'center', 'right'].map(align => (
-                        <button 
-                          key={align}
-                          onClick={() => updateSettings('textAlign', align)}
-                          style={{ 
-                            flex: 1, padding: '6px', border: 'none', borderRadius: '6px', 
-                            background: currentForm.settings.textAlign === align ? '#fff' : 'transparent',
-                            boxShadow: currentForm.settings.textAlign === align ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {align === 'left' && <AlignLeft size={16} />}
-                          {align === 'center' && <AlignCenter size={16} />}
-                          {align === 'right' && <AlignRight size={16} />}
-                        </button>
-                      ))}
-                    </div>
+                <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <span style={STYLES.label}>BG Color</span>
+                    <input type="color" style={{ width: '100%', height: '40px', border: '1px solid #eee', borderRadius: '8px', cursor: 'pointer' }} value={currentForm.settings.backgroundColor} onChange={e => updateSettings('backgroundColor', e.target.value)} />
                   </div>
-                </div>
+                  <div>
+                    <span style={STYLES.label}>Text Color</span>
+                    <input type="color" style={{ width: '100%', height: '40px', border: '1px solid #eee', borderRadius: '8px', cursor: 'pointer' }} value={currentForm.settings.textColor} onChange={e => updateSettings('textColor', e.target.value)} />
+                  </div>
+                </section>
 
-                <div>
-                  <label style={STYLES.label}>Layout & Style</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}><span>Width</span><span>{currentForm.settings.maxWidth}px</span></div>
-                      <input type="range" min="300" max="800" style={{ width: '100%' }} value={currentForm.settings.maxWidth} onChange={e => updateSettings('maxWidth', e.target.value)} />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      <div><span style={{ fontSize: '11px' }}>Bg</span><input type="color" style={{ width: '100%', height: '30px', border: '1px solid #ddd' }} value={currentForm.settings.backgroundColor} onChange={e => updateSettings('backgroundColor', e.target.value)} /></div>
-                      <div><span style={{ fontSize: '11px' }}>Btn</span><input type="color" style={{ width: '100%', height: '30px', border: '1px solid #ddd' }} value={currentForm.settings.buttonColor} onChange={e => updateSettings('buttonColor', e.target.value)} /></div>
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}><span>Border Radius</span><span>{currentForm.settings.borderRadius}px</span></div>
-                      <input type="range" min="0" max="40" style={{ width: '100%' }} value={currentForm.settings.borderRadius} onChange={e => updateSettings('borderRadius', e.target.value)} />
-                    </div>
-                  </div>
-                </div>
+                <section>
+                  <span style={STYLES.label}>Form Width ({currentForm.settings.maxWidth}px)</span>
+                  <input type="range" min="400" max="800" step="10" style={{ width: '100%' }} value={currentForm.settings.maxWidth} onChange={e => updateSettings('maxWidth', e.target.value)} />
+                </section>
+
+                <section>
+                  <span style={STYLES.label}>Corner Roundness ({currentForm.settings.borderRadius}px)</span>
+                  <input type="range" min="0" max="32" step="1" style={{ width: '100%' }} value={currentForm.settings.borderRadius} onChange={e => updateSettings('borderRadius', e.target.value)} />
+                </section>
+
+                <section>
+                  <span style={STYLES.label}>Internal Padding ({currentForm.settings.padding}px)</span>
+                  <input type="range" min="16" max="80" step="4" style={{ width: '100%' }} value={currentForm.settings.padding} onChange={e => updateSettings('padding', e.target.value)} />
+                </section>
+
+                <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '16px 0' }} />
+
+                <section>
+                  <span style={STYLES.label}>Description</span>
+                  <textarea style={{ ...STYLES.input, height: '60px', resize: 'none' }} value={currentForm.settings.description} onChange={e => updateSettings('description', e.target.value)} />
+                </section>
+
+                <section>
+                  <span style={STYLES.label}>Submit Button Text</span>
+                  <input style={STYLES.input} value={currentForm.settings.buttonText} onChange={e => updateSettings('buttonText', e.target.value)} />
+                </section>
+
+                <section>
+                  <span style={STYLES.label}>Button Color</span>
+                  <input type="color" style={{ width: '100%', height: '40px', border: '1px solid #eee', borderRadius: '8px', cursor: 'pointer' }} value={currentForm.settings.buttonColor} onChange={e => updateSettings('buttonColor', e.target.value)} />
+                </section>
               </div>
             )}
           </div>
-        </div>
+        </aside>
 
-        {/* Live Preview Area */}
-        <div style={{ flex: 1, padding: '40px', background: '#f0f2f5', overflowY: 'auto', display: 'flex', justifyContent: 'center' }}>
+        <main style={{ flex: 1, background: '#f8fafc', padding: '60px', display: 'flex', justifyContent: 'center', overflowY: 'auto' }}>
           <div style={{ 
-              maxWidth: `${currentForm.settings.maxWidth}px`, 
-              width: '100%', 
-              background: currentForm.settings.backgroundColor, 
-              padding: `${currentForm.settings.padding}px`, 
-              borderRadius: `${currentForm.settings.borderRadius}px`, 
-              textAlign: currentForm.settings.textAlign, 
-              color: currentForm.settings.textColor, 
-              fontFamily: currentForm.settings.fontFamily,
-              height: 'fit-content',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
+            maxWidth: `${currentForm.settings.maxWidth}px`, width: '100%', 
+            background: currentForm.settings.backgroundColor, 
+            color: currentForm.settings.textColor,
+            padding: `${currentForm.settings.padding}px`, 
+            borderRadius: `${currentForm.settings.borderRadius}px`, textAlign: currentForm.settings.textAlign,
+            boxShadow: '0 10px 25px rgba(0,0,0,0.05)', height: 'fit-content',
+            transition: 'all 0.2s ease'
           }}>
-            <h2 style={{ marginBottom: '8px' }}>{currentForm.title}</h2>
+            <h1 style={{ margin: '0 0 8px 0', fontSize: '24px' }}>{currentForm.title}</h1>
             <p style={{ opacity: 0.7, marginBottom: '30px' }}>{currentForm.settings.description}</p>
-
             {currentForm.questions.map(q => (
               <div key={q.id} style={{ marginBottom: '20px', textAlign: 'left' }}>
-                <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', color: currentForm.settings.textColor }}>
-                    {q.text} {q.required && <span style={{color: '#ef4444'}}>*</span>}
-                </label>
-                
-                {q.type === 'select' ? (
-                  <select style={{ ...STYLES.input, borderRadius: `${currentForm.settings.borderRadius / 2}px` }} disabled>
-                    {q.options.map((opt, idx) => <option key={idx}>{opt}</option>)}
-                  </select>
-                ) : q.type === 'checkboxes' ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {q.options.map((opt, idx) => (
-                      <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
-                        <input type="checkbox" disabled /> {opt}
-                      </label>
-                    ))}
-                  </div>
-                ) : (
-                  <input 
-                    style={{ ...STYLES.input, borderRadius: `${currentForm.settings.borderRadius / 2}px` }} 
-                    placeholder={q.placeholder} 
-                    disabled 
-                  />
-                )}
+                <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', fontSize: '14px' }}>{q.text}</label>
+                <input style={{ ...STYLES.input, borderRadius: `${Math.min(currentForm.settings.borderRadius, 10)}px` }} placeholder={q.placeholder} disabled />
               </div>
             ))}
-
             <button style={{ 
-                ...STYLES.btnPrimary, 
+                background: currentForm.settings.buttonColor, 
+                color: '#fff', 
+                border: 'none', 
                 width: '100%', 
-                justifyContent: 'center', 
-                background: currentForm.settings.buttonColor,
-                borderRadius: `${currentForm.settings.borderRadius}px`,
-                padding: '12px'
+                padding: '12px', 
+                borderRadius: `${Math.min(currentForm.settings.borderRadius, 10)}px`, 
+                fontWeight: '700',
+                marginTop: '10px'
             }}>
-                {currentForm.settings.buttonText}
+              {currentForm.settings.buttonText}
             </button>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );
 }
 
-/* --- Main Dashboard Wrapper --- */
+/* --- MAIN APP --- */
 export default function App() {
   const [view, setView] = useState('dashboard');
   const [forms, setForms] = useState([]);
@@ -326,7 +257,10 @@ export default function App() {
   useEffect(() => {
     const url = new URL(window.location.href);
     setShop(url.searchParams.get("shop") || "demo-store.myshopify.com");
-    apiFetchForms().then(data => { setForms(data); setLoading(false); }).catch(() => setLoading(false));
+    
+    apiFetchForms()
+      .then(data => { setForms(data); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
   const handleSave = async () => {
@@ -339,59 +273,65 @@ export default function App() {
         return [savedForm, ...prev];
       });
       setView('dashboard');
-    } catch (e) { alert(e.message); } finally { setIsSaving(false); }
+    } catch (e) { 
+      alert(e.message); 
+    } finally { 
+      setIsSaving(false); 
+    }
   };
 
-  return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', fontFamily: 'Inter, sans-serif' }}>
-      {view !== 'editor' && (
-        <div style={STYLES.sidebar}>
-          <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ background: '#15803d', padding: '6px', borderRadius: '6px' }}><Layout color="white" size={20} /></div>
-            <span style={{ fontWeight: '800', fontSize: '18px' }}>Formify</span>
-          </div>
-          <div style={{ padding: '12px', flex: 1 }}>
-            <button onClick={() => setView('dashboard')} style={STYLES.navItem(view === 'dashboard')}><Layout size={18} /> My Forms</button>
-          </div>
-        </div>
-      )}
+  /* --- NEW DELETE HANDLER --- */
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete? Your data will be lost once confirmed.")) {
+      try {
+        await apiDeleteForm(id);
+        setForms(prev => prev.filter(f => f.id !== id));
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+  };
 
+  if (loading) return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}><Loader className="animate-spin" /></div>;
+
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#fcfcfd', fontFamily: 'Inter, sans-serif' }}>
       {view === 'dashboard' && (
-        <div style={{ marginLeft: '260px', padding: '40px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h1 style={{ fontSize: '28px', fontWeight: '800', margin: 0 }}>My Forms</h1>
-                <button style={STYLES.btnPrimary} onClick={() => { 
-                    setCurrentForm({ title: 'New Form', questions: [], settings: DEFAULT_SETTINGS }); 
+        <div style={STYLES.container}>
+            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '48px' }}>
+                <div>
+                  <h1 style={{ fontSize: '32px', fontWeight: '800', margin: '0 0 8px 0' }}>My Forms</h1>
+                  <p style={{ color: '#6b7280', margin: 0 }}>Create and manage customer forms for <strong>{shop}</strong></p>
+                </div>
+                <button style={{ backgroundColor: '#10b981', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => { 
+                    setCurrentForm({ title: 'New Feedback Form', questions: [], settings: DEFAULT_SETTINGS }); 
                     setView('editor'); 
                 }}>
-                    <Plus size={18} /> Create New Form
+                    <Plus size={20} /> Create Form
                 </button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-               {/* REPLACE WITH THIS */}
-{forms.map(f => (
-  <div key={f.id} style={STYLES.card}>
-    <h3 style={{ margin: '0 0 15px 0' }}>{f.title}</h3>
-    <div style={{ display: 'flex', gap: '8px' }}>
-      <button 
-        onClick={() => { setCurrentForm(f); setView('editor'); }} 
-        style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer' }}
-      >
-        Edit
-      </button>
-      <button 
-        onClick={() => {
-          navigator.clipboard.writeText(f.id);
-          alert("ID Copied! Paste this in the Theme Editor.");
-        }} 
-        style={{ flex: 1, padding: '8px', borderRadius: '6px', background: '#f3f4f6', border: '1px solid #ddd', cursor: 'pointer' }}
-      >
-        Copy ID
-      </button>
-    </div>
-  </div>
-))}
-            </div>
+            </header>
+
+            {forms.length === 0 ? (
+              <div style={{ ...STYLES.card, textAlign: 'center', padding: '80px', border: '2px dashed #e5e7eb', background: 'transparent' }}>
+                <MousePointer2 size={48} style={{ color: '#10b981', marginBottom: '16px' }} />
+                <h3>No forms found</h3>
+                <p>Get started by creating your first form above.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
+                {forms.map(f => (
+                  <div key={f.id} style={STYLES.card}>
+                    <h3 style={{ margin: '0 0 16px 0' }}>{f.title}</h3>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button onClick={() => { setCurrentForm(f); setView('editor'); }} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid #e5e7eb', background: '#fff', fontWeight: '600', cursor: 'pointer' }}>Edit</button>
+                      <button onClick={() => { navigator.clipboard.writeText(f.id); alert("ID Copied!"); }} style={{ padding: '10px', borderRadius: '10px', border: 'none', background: '#f3f4f6', cursor: 'pointer' }}><Copy size={18} /></button>
+                      {/* --- ADDED DELETE BUTTON --- */}
+                      <button onClick={() => handleDelete(f.id)} style={{ padding: '10px', borderRadius: '10px', border: 'none', background: '#fee2e2', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={18} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
         </div>
       )}
 
@@ -404,6 +344,7 @@ export default function App() {
         body { margin: 0; }
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        input[type="range"] { accent-color: #10b981; }
       `}} />
     </div>
   );
