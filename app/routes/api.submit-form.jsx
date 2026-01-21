@@ -5,6 +5,7 @@ export const action = async ({ request }) => {
   const method = request.method;
 
   // --- 1. HANDLE DELETE ---
+  // --- 1. HANDLE DELETE ---
   if (method === "DELETE") {
     try {
       const url = new URL(request.url);
@@ -14,15 +15,24 @@ export const action = async ({ request }) => {
         return json({ error: "Missing form ID" }, { status: 400 });
       }
 
-      // Deletes the form and its data
+      console.log("Attempting to delete form ID:", id);
+
+      // STEP A: Delete all responses associated with this form first
+      // This prevents the "Foreign key constraint failed" error
+      await prisma.response.deleteMany({
+        where: { formId: id },
+      });
+
+      // STEP B: Delete the form itself
       await prisma.form.delete({
         where: { id: id },
       });
 
-      return json({ success: true, message: "Form deleted successfully" });
+      return json({ success: true, message: "Form and responses deleted" });
     } catch (error) {
-      console.error("Delete error:", error);
-      return json({ error: "Failed to delete form" }, { status: 500 });
+      // This will log the SPECIFIC error to your Vercel/Cloudflare logs
+      console.error("CRITICAL DELETE ERROR:", error);
+      return json({ error: "Database error", details: error.message }, { status: 500 });
     }
   }
 
