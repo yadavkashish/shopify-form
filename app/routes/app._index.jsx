@@ -6,17 +6,19 @@ import {
   Maximize, Square, Paintbrush, MessageSquare
 } from 'lucide-react';
 
-/* --- RESTORED API LOGIC --- */
+/* --- SECURED API LOGIC --- */
 const API_URL = "/api/forms";
 
-async function apiFetchForms() {
-  const res = await fetch(API_URL);
+// Consolidated: This version now handles the shop parameter correctly
+async function apiFetchForms(shop) {
+  const res = await fetch(`${API_URL}?shop=${shop}`);
   if (res.ok) return res.json();
   throw new Error("Failed to load forms");
 }
 
-async function apiSaveForm(payload) {
-  const res = await fetch(API_URL, {
+// Updated: Passes shop in the URL to ensure backend authentication matches
+async function apiSaveForm(payload, shop) {
+  const res = await fetch(`${API_URL}?shop=${shop}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -35,7 +37,6 @@ const FIELD_TYPES = [
   { type: 'select', label: 'Dropdown', icon: <List size={16} />, hasOptions: true },
   { type: 'checkboxes', label: 'Checkboxes', icon: <CheckSquare size={16} />, hasOptions: true },
 ];
-
 
 const DEFAULT_SETTINGS = {
   description: 'Please fill out the form below.',
@@ -139,13 +140,11 @@ function EditorView({ currentForm, setCurrentForm, setView, onSave, isSaving }) 
                     
                     <input style={STYLES.input} value={q.text} onChange={(e) => updateQuestion(q.id, { text: e.target.value })} placeholder="Label text" />
                     
-                    {/* --- ADDED REQUIRED OPTION --- */}
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', fontSize: '13px', cursor: 'pointer' }}>
                       <input type="checkbox" checked={q.required} onChange={(e) => updateQuestion(q.id, { required: e.target.checked })} />
                       Required Field
                     </label>
 
-                    {/* --- ADDED OPTIONS MANAGEMENT FOR SELECT/CHECKBOXES --- */}
                     { (q.type === 'select' || q.type === 'checkboxes') && (
                       <div style={{ marginTop: '12px', borderTop: '1px solid #f3f4f6', paddingTop: '12px' }}>
                         <span style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', display: 'block', marginBottom: '8px' }}>OPTIONS</span>
@@ -181,7 +180,6 @@ function EditorView({ currentForm, setCurrentForm, setView, onSave, isSaving }) 
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {/* --- EXTENDED DESIGN OPTIONS --- */}
                 <section>
                   <span style={STYLES.label}>Alignment</span>
                   <div style={{ display: 'flex', background: '#f3f4f6', padding: '4px', borderRadius: '10px' }}>
@@ -258,7 +256,6 @@ function EditorView({ currentForm, setCurrentForm, setView, onSave, isSaving }) 
                   {q.text} {q.required && <span style={{ color: '#ef4444' }}>*</span>}
                 </label>
                 
-                {/* --- RENDER LOGIC BASED ON TYPE --- */}
                 {q.type === 'select' ? (
                   <select style={{ ...STYLES.input, borderRadius: `${Math.min(currentForm.settings.borderRadius, 10)}px` }} disabled>
                     <option value="">Select an option...</option>
@@ -309,9 +306,19 @@ export default function App() {
 
   useEffect(() => {
     const url = new URL(window.location.href);
-    setShop(url.searchParams.get("shop") || "demo-store.myshopify.com");
+    const shopParam = url.searchParams.get("shop");
+
+    if (!shopParam) {
+      console.error("No shop domain detected. Application restricted.");
+      setShop(null); 
+      setLoading(false);
+      return;
+    }
+
+    setShop(shopParam);
     
-    apiFetchForms()
+    // Secure fetch: passes shopParam to the consolidated API function
+    apiFetchForms(shopParam)
       .then(data => { setForms(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
@@ -319,7 +326,9 @@ export default function App() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const savedForm = await apiSaveForm({ ...currentForm, shop });
+      // Secure Save: includes shop both in payload and as a query parameter
+      const savedForm = await apiSaveForm({ ...currentForm, shop }, shop);
+      
       setForms(prev => {
         const exists = prev.find(f => f.id === savedForm.id);
         if (exists) return prev.map(f => f.id === savedForm.id ? savedForm : f);

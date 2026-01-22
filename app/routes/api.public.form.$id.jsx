@@ -10,33 +10,36 @@ const getCorsHeaders = () => ({
 
 export const loader = async ({ params, request }) => {
   const headers = getCorsHeaders();
+  const url = new URL(request.url);
+  // Optional: Pass the shop as a query param to ensure 
+  // we are pulling the form for the correct domain
+  const expectedShop = url.searchParams.get("shop");
 
-  // 1. Handle OPTIONS pre-flight (Browsers send this before the actual GET)
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers });
   }
 
   try {
-    // 2. Fetch the form
     const form = await prisma.form.findUnique({
       where: { id: params.id },
     });
 
-    if (!form) {
-      console.error(`Formify: Form with ID ${params.id} not found.`);
-      return json({ error: "Form not found" }, { status: 404, headers });
+    // SAFETY CHECK: 
+    // 1. Does the form exist?
+    // 2. If a shop was provided in the URL, does it match the form's shop?
+    if (!form || (expectedShop && form.shop !== expectedShop)) {
+      return json({ error: "Form not found on this store" }, { status: 404, headers });
     }
 
-    // 3. Return the form data with CORS headers
-    return json(form, { headers });
+    // 3. Ensure we only show "Active" forms to the public
+    if (form.status !== "Active") {
+       return json({ error: "This form is currently inactive" }, { status: 403, headers });
+    }
 
+    return json(form, { headers });
   } catch (error) {
     console.error("Formify Loader Error:", error);
-    // Return 500 with headers so the browser doesn't block the error message
-    return json(
-      { error: "Internal Server Error", details: error.message }, 
-      { status: 500, headers }
-    );
+    return json({ error: "Internal Server Error" }, { status: 500, headers });
   }
 };
 

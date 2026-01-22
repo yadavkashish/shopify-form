@@ -38,6 +38,7 @@ model Form {
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   responses  Response[]
+  @@index([shop])
 }
 
 model Response {
