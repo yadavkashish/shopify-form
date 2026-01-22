@@ -303,25 +303,36 @@ export default function App() {
   const [shop, setShop] = useState("");
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [host, setHost] = useState("");
 
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const shopParam = url.searchParams.get("shop");
+ useEffect(() => {
+  const url = new URL(window.location.href);
 
-    if (!shopParam) {
-      console.error("No shop domain detected. Application restricted.");
-      setShop(null); 
+  const shopParam = url.searchParams.get("shop") || localStorage.getItem("shop");
+  const hostParam = url.searchParams.get("host") || localStorage.getItem("host");
+
+  if (!shopParam || !hostParam) {
+    console.error("Missing shop or host param");
+    setLoading(false);
+    return;
+  }
+
+  setShop(shopParam);
+  setHost(hostParam);
+
+  localStorage.setItem("shop", shopParam);
+  localStorage.setItem("host", hostParam);
+
+  apiFetchForms(shopParam)
+    .then(data => {
+      setForms(data);
       setLoading(false);
-      return;
-    }
+    })
+    .catch(() => setLoading(false));
 
-    setShop(shopParam);
-    
-    // Secure fetch: passes shopParam to the consolidated API function
-    apiFetchForms(shopParam)
-      .then(data => { setForms(data); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
+}, []);
+
+
 
   const handleSave = async () => {
     setIsSaving(true);

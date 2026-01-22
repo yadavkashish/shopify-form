@@ -1,4 +1,6 @@
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+// Ensure you are importing from the react-router specific adapter
+import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
 export default function App() {
   return (
@@ -15,7 +17,11 @@ export default function App() {
         <Links />
       </head>
       <body>
-        <Outlet />
+        {/* The AppProvider MUST wrap the Outlet */}
+        <AppProvider isEmbeddedApp>
+          <Outlet />
+        </AppProvider>
+
         <ScrollRestoration />
         <Scripts />
       </body>
