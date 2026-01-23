@@ -279,7 +279,7 @@ export default function AdditionalPage() {
                   {loading ? (
                     <tr><td colSpan="4" style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>Gathering data...</td></tr>
                   ) : formList.length === 0 ? (
-                    <tr><td colSpan="4" style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>No forms found.</td></tr>
+                    <tr><td colSpan="4" style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>No responses yet.</td></tr>
                   ) : formList.map((form) => (
                     <tr key={form.formId} className="table-row">
                       <td style={STYLES.tableCell}>

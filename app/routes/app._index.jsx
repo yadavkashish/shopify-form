@@ -396,7 +396,7 @@ export default function App() {
             {forms.length === 0 ? (
               <div style={{ ...STYLES.card, textAlign: 'center', padding: '80px', border: '2px dashed #e5e7eb', background: 'transparent' }}>
                 <MousePointer2 size={48} style={{ color: '#10b981', marginBottom: '16px' }} />
-                <h3>No responses yet</h3>
+                <h3>No forms found</h3>
                 <p>Get started by creating your first form above.</p>
               </div>
             ) : (
