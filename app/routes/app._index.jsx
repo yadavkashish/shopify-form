@@ -3,20 +3,18 @@ import {
   Plus, Trash2, Settings, Eye, Save, ChevronLeft, Layout, 
   Type, Mail, Hash, AlignLeft, CheckSquare, List, 
   X, Loader, Copy, MousePointer2, AlignCenter, AlignRight,
-  Maximize, Square, Paintbrush, MessageSquare
+  Maximize, Square, Paintbrush, MessageSquare, Info, ExternalLink
 } from 'lucide-react';
 
 /* --- SECURED API LOGIC --- */
 const API_URL = "/api/forms";
 
-// Consolidated: This version now handles the shop parameter correctly
 async function apiFetchForms(shop) {
   const res = await fetch(`${API_URL}?shop=${shop}`);
   if (res.ok) return res.json();
   throw new Error("Failed to load forms");
 }
 
-// Updated: Passes shop in the URL to ensure backend authentication matches
 async function apiSaveForm(payload, shop) {
   const res = await fetch(`${API_URL}?shop=${shop}`, {
     method: "POST",
@@ -61,7 +59,17 @@ const STYLES = {
   input: { 
     width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e5e7eb', fontSize: '14px', outline: 'none', boxSizing: 'border-box' 
   },
-  label: { fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', display: 'block', marginTop: '16px' }
+  label: { fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', display: 'block', marginTop: '16px' },
+  // Added instruction specific styles
+  instructionBox: {
+    backgroundColor: '#f0fdf4',
+    border: '1px solid #bbf7d0',
+    borderRadius: '12px',
+    padding: '20px',
+    marginBottom: '32px',
+    display: 'flex',
+    gap: '16px'
+  }
 };
 
 /* --- EDITOR COMPONENT --- */
@@ -332,12 +340,9 @@ export default function App() {
 
 }, []);
 
-
-
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Secure Save: includes shop both in payload and as a query parameter
       const savedForm = await apiSaveForm({ ...currentForm, shop }, shop);
       
       setForms(prev => {
@@ -372,6 +377,22 @@ export default function App() {
                 </button>
             </header>
 
+            {/* --- NEW INSTRUCTION SECTION --- */}
+            <div style={STYLES.instructionBox}>
+              <div style={{ background: '#10b981', color: '#fff', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Info size={20} />
+              </div>
+              <div>
+                <h4 style={{ margin: '0 0 8px 0', color: '#065f46' }}>How to use your forms</h4>
+                <ol style={{ margin: 0, paddingLeft: '18px', color: '#065f46', fontSize: '14px', lineHeight: '1.6' }}>
+                  <li>Copy the <b>Form ID</b> from your desired form below.</li>
+                  <li>Go to your <b>Online Store</b> and select <b>Themes</b>.</li>
+                  <li>Click <b>Customize</b> and select the area from the left sidebar where the form is required.</li>
+                  <li>Click <b>Add block / Add app</b>, select <b>FormMaker</b>, and paste your <b>Form ID</b>.</li>
+                </ol>
+              </div>
+            </div>
+
             {forms.length === 0 ? (
               <div style={{ ...STYLES.card, textAlign: 'center', padding: '80px', border: '2px dashed #e5e7eb', background: 'transparent' }}>
                 <MousePointer2 size={48} style={{ color: '#10b981', marginBottom: '16px' }} />
@@ -385,7 +406,13 @@ export default function App() {
                     <h3 style={{ margin: '0 0 16px 0' }}>{f.title}</h3>
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <button onClick={() => { setCurrentForm(f); setView('editor'); }} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid #e5e7eb', background: '#fff', fontWeight: '600', cursor: 'pointer' }}>Edit</button>
-                      <button onClick={() => { navigator.clipboard.writeText(f.id); alert("ID Copied!"); }} style={{ padding: '10px', borderRadius: '10px', border: 'none', background: '#f3f4f6', cursor: 'pointer' }}><Copy size={18} /></button>
+                      <button 
+                        onClick={() => { navigator.clipboard.writeText(f.id); alert("ID Copied!"); }} 
+                        style={{ padding: '10px', borderRadius: '10px', border: 'none', background: '#f3f4f6', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        title="Copy Form ID"
+                      >
+                        <Copy size={18} /> <span style={{fontSize: '12px', fontWeight: '600'}}>Copy ID</span>
+                      </button>
                     </div>
                   </div>
                 ))}
