@@ -367,7 +367,7 @@ export default function App() {
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '48px' }}>
                 <div>
                   <h1 style={{ fontSize: '32px', fontWeight: '800', margin: '0 0 8px 0' }}>My Forms</h1>
-                  <p style={{ color: '#6b7280', margin: 0 }}>Create and manage customer forms for <strong>{shop}</strong></p>
+                 
                 </div>
                 <button style={{ backgroundColor: '#10b981', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => { 
                     setCurrentForm({ title: 'New Feedback Form', questions: [], settings: DEFAULT_SETTINGS }); 
@@ -397,7 +397,7 @@ export default function App() {
               <div style={{ ...STYLES.card, textAlign: 'center', padding: '80px', border: '2px dashed #e5e7eb', background: 'transparent' }}>
                 <MousePointer2 size={48} style={{ color: '#10b981', marginBottom: '16px' }} />
                 <h3>No forms found</h3>
-                <p>Get started by creating your first form above.</p>
+                
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
