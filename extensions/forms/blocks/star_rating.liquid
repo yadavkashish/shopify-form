@@ -1,11 +1,11 @@
 {% comment %} extensions/form-block/blocks/form_embed.liquid {% endcomment %}
 
 <div 
-  id="formify-container" 
+  class="formify-container" 
   data-form-id="{{ block.settings.form_id }}"
   style="margin: 20px 0;"
 >
-  <div id="formify-app">
+  <div class="formify-app">
     <p>Loading form...</p>
   </div>
 </div>
@@ -22,11 +22,8 @@
       "id": "form_id",
       "label": "Form ID",
       "info": "Copy the ID from your Formify App Dashboard"
-    },
-    {
-      "type": "header",
-      "content": "Appearance"
     }
   ]
 }
 {% endschema %}
+
